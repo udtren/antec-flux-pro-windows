@@ -1,0 +1,15 @@
+# Required Python packages for Antec Flux Pro Display
+
+# Core dependencies
+pyusb==1.2.1          # USB communication
+libusb==1.0.29         # USB backend for Windows
+pynvml==11.5.0         # NVIDIA GPU monitoring
+WMI==1.5.1             # Windows Management Instrumentation for CPU monitoring
+toml==0.10.2           # Configuration file parsing
+
+# Windows service support
+pywin32==306           # Windows service functionality
+
+# Additional utilities
+psutil==5.9.6          # System monitoring (alternative/fallback)
+colorama==0.4.6        # Colored console output

@@ -1,0 +1,8 @@
+# CPU device path (Windows uses WMI by default)
+cpu_device = "WMI"
+
+# GPU device (auto-detected for NVIDIA GPUs)
+gpu_device = "auto"
+
+# Polling interval in milliseconds (how often to update the display)
+polling_interval = 1000
