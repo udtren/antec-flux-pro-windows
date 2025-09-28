@@ -41,6 +41,8 @@ venv.bak/
 
 # Windows specific
 *.pdb
+*.dll
+*.exe
 Thumbs.db
 ehthumbs.db
 Desktop.ini

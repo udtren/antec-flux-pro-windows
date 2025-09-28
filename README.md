@@ -4,7 +4,7 @@ A Windows system service that monitors CPU and GPU temperatures and displays the
 
 ## Features
 
-- **CPU Temperature Monitoring**: Uses Windows Management Instrumentation (WMI) to read CPU temperatures
+- **CPU Temperature Monitoring**: Multiple methods including LibreHardwareMonitor DLL (direct access), Windows Management Instrumentation (WMI), and psutil
 - **GPU Temperature Monitoring**: Supports NVIDIA GPUs through pynvml (Python NVML bindings)
 - **USB Communication**: Communicates with the Antec Flux Pro display via USB using PyUSB
 - **Windows Service**: Runs as a Windows system service for automatic startup
@@ -45,6 +45,12 @@ cd antec-flux-pro-windows
 
 # Run the setup script (creates venv and installs dependencies)
 .\scripts\build.ps1
+
+# Download LibreHardwareMonitorLib.dll (recommended for accurate CPU temps)
+python download_dll.py
+
+# Set up LibreHardwareMonitor DLL support
+python setup_libre_hardware_monitor.py
 ```
 
 Or set up manually:
@@ -57,6 +63,13 @@ python -m venv venv
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Install LibreHardwareMonitor DLL support
+pip install pythonnet==3.0.3
+
+# Download DLL manually from:
+# https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases/latest
+# Extract LibreHardwareMonitorLib.dll to project root
 ```
 
 ## Usage
@@ -140,9 +153,12 @@ The project requires these Python packages (installed automatically):
 4. Try running as Administrator
 
 ### CPU Temperature Not Available
-1. Run as Administrator (required for WMI temperature access)
-2. Check if your motherboard supports WMI temperature reporting
-3. Install hardware monitoring software like LibreHardwareMonitor
+1. **LibreHardwareMonitor DLL (Recommended)**: The project includes LibreHardwareMonitorLib.dll for direct hardware access
+   - Run: `python setup_libre_hardware_monitor.py`
+   - Provides most accurate temperature readings
+2. Run as Administrator (required for WMI temperature access)
+3. Check if your motherboard supports WMI temperature reporting
+4. Alternative: Install LibreHardwareMonitor application for WMI namespace support
 
 ### GPU Temperature Not Available
 1. Ensure NVIDIA drivers are installed and up to date
@@ -154,6 +170,22 @@ The project requires these Python packages (installed automatically):
 # Test the application
 .\scripts\test.ps1
 
+# Test LibreHardwareMonitor DLL integration
+python test_libre_hardware_monitor.py
+
 # Or run directly
 python main.py
 ```
+
+## CPU Temperature Monitoring Methods
+
+The application uses multiple methods to obtain CPU temperature, in order of priority:
+
+1. **LibreHardwareMonitor DLL**: Direct access via .NET interop (most accurate)
+2. **psutil**: Cross-platform system monitoring
+3. **WMI - OpenHardwareMonitor/LibreHardwareMonitor**: WMI namespace (requires app installed)
+4. **WMI - MSAcpi_ThermalZoneTemperature**: Windows ACPI thermal zones
+5. **WMI - Win32_TemperatureProbe**: Generic temperature probes
+6. **WMI - Performance Counters**: Thermal zone performance data
+
+The LibreHardwareMonitor DLL method provides the most reliable and accurate readings without requiring additional software installation.

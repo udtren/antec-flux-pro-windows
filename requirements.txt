@@ -13,3 +13,4 @@ pywin32==306           # Windows service functionality
 # Additional utilities
 psutil==5.9.6          # System monitoring (alternative/fallback)
 colorama==0.4.6        # Colored console output
+pythonnet==3.0.3       # .NET interop for LibreHardwareMonitor DLL

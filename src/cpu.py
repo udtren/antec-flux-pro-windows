@@ -4,7 +4,18 @@ CPU temperature monitoring for Windows using multiple methods.
 
 import wmi
 import psutil
+import os
+import sys
 from typing import Optional
+
+# Try to import .NET interop for LibreHardwareMonitor DLL
+try:
+    import clr
+
+    PYTHONNET_AVAILABLE = True
+except ImportError:
+    PYTHONNET_AVAILABLE = False
+    clr = None
 
 
 class CPUMonitor:
@@ -14,17 +25,63 @@ class CPUMonitor:
         self.device = device or "auto"
         self.wmi_connection = None
         self.methods_tried = []
+        self.libre_hardware_monitor = None
+        self.computer = None
         self._initialize()
 
     def _initialize(self):
         """Initialize available monitoring methods."""
-        # Try WMI connection
+        # Try LibreHardwareMonitor DLL first (most reliable)
+        self._initialize_libre_hardware_monitor()
+
+        # Try WMI connection as fallback
         try:
             self.wmi_connection = wmi.WMI(namespace="root\\cimv2")
             self._test_wmi_access()
         except Exception as e:
             print(f"Warning: Failed to initialize WMI connection: {e}")
             self.wmi_connection = None
+
+    def _initialize_libre_hardware_monitor(self):
+        """Initialize LibreHardwareMonitor DLL."""
+        if not PYTHONNET_AVAILABLE:
+            print(
+                "Warning: pythonnet not available, LibreHardwareMonitor DLL support disabled"
+            )
+            return
+
+        try:
+            # Get the directory where this script is located
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.dirname(script_dir)
+            dll_path = os.path.join(project_root, "LibreHardwareMonitorLib.dll")
+
+            if not os.path.exists(dll_path):
+                print(f"Warning: LibreHardwareMonitorLib.dll not found at {dll_path}")
+                return
+
+            # Add reference to the DLL
+            clr.AddReference(dll_path)
+
+            # Import the LibreHardwareMonitor types
+            from LibreHardwareMonitor.Hardware import Computer, HardwareType
+
+            # Create and open the computer object
+            self.computer = Computer()
+            self.computer.IsCpuEnabled = True
+            self.computer.IsGpuEnabled = False  # We only need CPU for this class
+            self.computer.IsMemoryEnabled = False
+            self.computer.IsMotherboardEnabled = False
+            self.computer.IsControllerEnabled = False
+            self.computer.IsNetworkEnabled = False
+            self.computer.IsStorageEnabled = False
+
+            self.computer.Open()
+            print("LibreHardwareMonitor DLL initialized successfully")
+
+        except Exception as e:
+            print(f"Warning: Failed to initialize LibreHardwareMonitor DLL: {e}")
+            self.computer = None
 
     def _test_wmi_access(self):
         """Test if WMI temperature access is available."""
@@ -86,7 +143,12 @@ class CPUMonitor:
         """Get current CPU temperature in Celsius."""
         self.methods_tried = []
 
-        # Try psutil first (if available)
+        # Try LibreHardwareMonitor DLL first (most accurate)
+        temp = self._get_libre_hardware_monitor_temperature()
+        if temp is not None:
+            return temp
+
+        # Try psutil (if available)
         temp = self._get_psutil_temperature()
         if temp is not None:
             return temp
@@ -113,6 +175,37 @@ class CPUMonitor:
         temp = self._get_performance_counter_temperature()
         if temp is not None:
             return temp
+
+        return None
+
+    def _get_libre_hardware_monitor_temperature(self) -> Optional[float]:
+        """Get temperature using LibreHardwareMonitor DLL directly."""
+        if not self.computer:
+            return None
+
+        try:
+            self.methods_tried.append("LibreHardwareMonitor DLL")
+
+            # Update all hardware
+            for hardware in self.computer.Hardware:
+                hardware.Update()
+
+                # Look for CPU hardware
+                if str(hardware.HardwareType) == "Cpu":
+                    # Look for temperature sensors
+                    for sensor in hardware.Sensors:
+                        if (
+                            str(sensor.SensorType) == "Temperature"
+                            and sensor.Value is not None
+                        ):
+                            # Get the first valid CPU temperature
+                            # Usually Core temperatures or CPU Package temperature
+                            temp = float(sensor.Value)
+                            if 0 < temp < 150:  # Sanity check
+                                return temp
+
+        except Exception as e:
+            print(f"LibreHardwareMonitor DLL error: {e}")
 
         return None
 
@@ -225,11 +318,27 @@ class CPUMonitor:
 
     def get_info(self) -> str:
         """Get information about the CPU monitoring method."""
-        if not self.wmi_connection:
-            return "CPU monitoring: WMI unavailable"
+        if self.computer:
+            info = "CPU monitoring: LibreHardwareMonitor DLL (direct access)"
+        elif not self.wmi_connection:
+            info = "CPU monitoring: Limited (WMI unavailable)"
+        else:
+            info = "CPU monitoring: WMI fallback methods"
 
-        info = "CPU monitoring: Multiple methods"
         if self.methods_tried:
-            info += f" (tried: {', '.join(self.methods_tried)})"
+            info += f" (last used: {', '.join(self.methods_tried)})"
 
         return info
+
+    def close(self):
+        """Clean up resources."""
+        if self.computer:
+            try:
+                self.computer.Close()
+            except Exception:
+                pass
+            self.computer = None
+
+    def __del__(self):
+        """Destructor to ensure cleanup."""
+        self.close()
