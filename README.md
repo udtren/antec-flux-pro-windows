@@ -181,11 +181,9 @@ python main.py
 
 The application uses multiple methods to obtain CPU temperature, in order of priority:
 
-1. **LibreHardwareMonitor DLL**: Direct access via .NET interop (most accurate)
+1. **LibreHardwareMonitor DLL**: Direct access via .NET interop
 2. **psutil**: Cross-platform system monitoring
 3. **WMI - OpenHardwareMonitor/LibreHardwareMonitor**: WMI namespace (requires app installed)
 4. **WMI - MSAcpi_ThermalZoneTemperature**: Windows ACPI thermal zones
 5. **WMI - Win32_TemperatureProbe**: Generic temperature probes
 6. **WMI - Performance Counters**: Thermal zone performance data
-
-The LibreHardwareMonitor DLL method provides the most reliable and accurate readings without requiring additional software installation.
