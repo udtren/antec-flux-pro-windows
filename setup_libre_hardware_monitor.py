@@ -44,19 +44,22 @@ def check_dll():
     else:
         print(f"❌ LibreHardwareMonitorLib.dll not found at: {dll_path}")
         print("Attempting to download automatically...")
-        
+
         # Try to download using the download script
         try:
             import download_dll
+
             if download_dll.download_libre_hardware_monitor_dll():
                 print("✅ DLL downloaded successfully")
                 return True
         except Exception as e:
             print(f"Auto-download failed: {e}")
-        
+
         print("Manual download required:")
         print("1. Run: python download_dll.py")
-        print("2. Or download from: https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases/latest")
+        print(
+            "2. Or download from: https://github.com/LibreHardwareMonitor/LibreHardwareMonitor/releases/latest"
+        )
         print("3. Extract LibreHardwareMonitorLib.dll to project root directory")
         return False
 
